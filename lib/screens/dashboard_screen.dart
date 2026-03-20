@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../database/case_database.dart';
 import '../screens/login_screen.dart';
 import '../screens/case_list_screen.dart';
@@ -19,6 +20,7 @@ class DashboardScreenState extends State<DashboardScreen> {
   int todayHearings = 0;
   int totalCases = 0;
   int completedCases = 0;
+  int pendingCases = 0;
 
   String userName = "";
 
@@ -54,6 +56,7 @@ class DashboardScreenState extends State<DashboardScreen> {
       todayHearings = hearings;
       totalCases = cases.length;
       completedCases = completed;
+      pendingCases = cases.length - completed;
       isLoading = false;
     });
   }
@@ -103,6 +106,45 @@ class DashboardScreenState extends State<DashboardScreen> {
     setState(() {});
   }
 
+  Widget buildChart() {
+    return Container(
+      height: 200,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: PieChart(
+        PieChartData(
+          sectionsSpace: 2,
+          centerSpaceRadius: 40,
+          sections: [
+            PieChartSectionData(
+              value: completedCases.toDouble(),
+              color: Colors.green,
+              title: "Done",
+              radius: 50,
+              titleStyle: const TextStyle(
+                fontSize: 12,
+                color: Colors.white,
+              ),
+            ),
+            PieChartSectionData(
+              value: pendingCases.toDouble(),
+              color: Colors.red,
+              title: "Pending",
+              radius: 50,
+              titleStyle: const TextStyle(
+                fontSize: 12,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
 
@@ -127,50 +169,51 @@ class DashboardScreenState extends State<DashboardScreen> {
         actions: [
 
           FutureBuilder<int>(
-  future: CaseDatabase.getTodayHearingsCount(),
-  builder: (context, snapshot) {
+            future: CaseDatabase.getTodayHearingsCount(),
+            builder: (context, snapshot) {
 
-    int count = snapshot.data ?? 0;
+              int count = snapshot.data ?? 0;
 
-    return Stack(
-      children: [
+              return Stack(
+                children: [
 
-        IconButton(
-          icon: const Icon(Icons.notifications_none, color: Colors.white),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const NotificationScreen(),
-              ),
-            );
-          },
-        ),
+                  IconButton(
+                    icon: const Icon(Icons.notifications_none, color: Colors.white),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const NotificationScreen(),
+                        ),
+                      );
+                    },
+                  ),
 
-        if (count > 0)
-          Positioned(
-            right: 8,
-            top: 8,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
-                color: Colors.red,
-                shape: BoxShape.circle,
-              ),
-              child: Text(
-                "$count",
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                ),
-              ),
-            ),
+                  if (count > 0)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          "$count",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                ],
+              );
+            },
           ),
 
-      ],
-    );
-  },
-),
           PopupMenuButton<String>(
             icon: const Icon(Icons.account_circle, color: Colors.white),
             onSelected: (value) {
@@ -254,6 +297,10 @@ class DashboardScreenState extends State<DashboardScreen> {
 
                       ],
                     ),
+
+                    const SizedBox(height: 25),
+
+                    buildChart(),
 
                     const SizedBox(height: 25),
 
