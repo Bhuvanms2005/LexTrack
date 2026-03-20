@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../database/case_database.dart';
-import '../widgets/app_drawer.dart';
 
 class TodaysHearingsScreen extends StatefulWidget {
   const TodaysHearingsScreen({super.key});
@@ -45,7 +44,6 @@ class _TodaysHearingsScreenState extends State<TodaysHearingsScreen> {
         foregroundColor: Colors.white,
       ),
 
-      drawer: const AppDrawer(),
 
       backgroundColor: const Color(0xFF1E3A5F),
 

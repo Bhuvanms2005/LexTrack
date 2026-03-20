@@ -1,115 +1,165 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'register_screen.dart';
-import 'dashboard_screen.dart';
-class LoginScreen extends StatefulWidget{
+import 'main_screen.dart';
+
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
   @override
-  State<LoginScreen> createState()=> _LoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
-class _LoginScreenState extends State<LoginScreen>{
+
+class _LoginScreenState extends State<LoginScreen> {
+
   bool _isPasswordVisible = false;
   bool _isLoading = false;
+
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+
   void loginUser() async {
 
-  setState(() {
-    _isLoading = true;
-  });
+    String email = emailController.text.trim();
+    String password = passwordController.text.trim();
 
-  await Future.delayed(const Duration(seconds: 2));
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Enter email and password")),
+      );
+      return;
+    }
 
-  setState(() {
-    _isLoading = false;
-  });
+    setState(() {
+      _isLoading = true;
+    });
 
-  Navigator.pushReplacement(
-    context,
-    MaterialPageRoute(
-      builder: (context) => const DashboardScreen(),
-    ),
-  );
-}
+    final prefs = await SharedPreferences.getInstance();
+
+    String? savedEmail = prefs.getString("email");
+    String? savedPassword = prefs.getString("password");
+
+    await Future.delayed(const Duration(milliseconds: 800));
+
+    if (!mounted) return;
+
+    if (email == savedEmail && password == savedPassword) {
+
+      await prefs.setBool("isLoggedIn", true);
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const MainScreen()),
+        (route) => false,
+      );
+
+    } else {
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Invalid credentials")),
+      );
+    }
+  }
+
   @override
-  Widget build(BuildContext context)
-  {
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+
     return Scaffold(
-      backgroundColor:const Color(0xFF1E3A5F),
-      body:Center(
-        child:SingleChildScrollView(
-          child:Container(
-            width:350,
+      backgroundColor: const Color(0xFF1E3A5F),
+      body: Center(
+        child: SingleChildScrollView(
+          child: Container(
+            width: 350,
             padding: const EdgeInsets.all(25),
-            decoration:BoxDecoration(
-              color:Colors.white,
-              borderRadius:BorderRadius.circular(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
             ),
-            child:Column(
-              mainAxisSize:MainAxisSize.min,
-              children:[
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+
                 const Icon(
                   Icons.balance,
-                  size:60,
-                  color:Color(0xFFC9A227),
+                  size: 60,
+                  color: Color(0xFFC9A227),
                 ),
-                const SizedBox(height:10),
+
+                const SizedBox(height: 10),
+
                 const Text(
                   "LexTrack",
-                  style:TextStyle(
-                    fontSize:26,
-                    fontWeight:FontWeight.bold,
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
+
                 const Text(
                   "Advocate Case Manager",
-                  style:TextStyle(
-                    color:Colors.grey,
+                  style: TextStyle(
+                    color: Colors.grey,
                   ),
                 ),
-                const SizedBox(height:30),
+
+                const SizedBox(height: 30),
+
                 TextField(
-                  controller:emailController,
-                  decoration:InputDecoration(
-                    labelText:"Email",
-                    border:OutlineInputBorder(
-                      borderRadius:BorderRadius.circular(8),
+                  controller: emailController,
+                  decoration: InputDecoration(
+                    labelText: "Email",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
                     ),
                   ),
                 ),
-                const SizedBox(height:15),
+
+                const SizedBox(height: 15),
+
                 TextField(
-                  controller:passwordController,
-                  obscureText:!_isPasswordVisible,
-                  decoration:InputDecoration(
-                    labelText:"Password",
-                    border:OutlineInputBorder(
-                      borderRadius:BorderRadius.circular(8),
+                  controller: passwordController,
+                  obscureText: !_isPasswordVisible,
+                  decoration: InputDecoration(
+                    labelText: "Password",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    suffixIcon:IconButton(
-                      icon:Icon(
-                        _isPasswordVisible?Icons.visibility:Icons.visibility_off,
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _isPasswordVisible
+                            ? Icons.visibility
+                            : Icons.visibility_off,
                       ),
-                      onPressed:()
-                      {
-                        setState((){
-                          _isPasswordVisible=!_isPasswordVisible;
+                      onPressed: () {
+                        setState(() {
+                          _isPasswordVisible = !_isPasswordVisible;
                         });
                       },
                     ),
                   ),
                 ),
-                const SizedBox(height:25),
+
+                const SizedBox(height: 25),
+
                 SizedBox(
                   width: double.infinity,
                   height: 45,
-
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFC9A227),
                     ),
-
                     onPressed: _isLoading ? null : loginUser,
-
                     child: _isLoading
                         ? const SizedBox(
                             height: 22,
@@ -125,32 +175,32 @@ class _LoginScreenState extends State<LoginScreen>{
                           ),
                   ),
                 ),
+
                 const SizedBox(height: 15),
 
-               Row(
+                Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
+                  children: [
 
                     const Text("Don't have an account? "),
 
                     TextButton(
-                    onPressed: () {
-                    Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                    builder: (context) => const RegisterScreen(),
-          ),
-        );
-      },
-      child: const Text("Register"),
-    ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const RegisterScreen(),
+                          ),
+                        );
+                      },
+                      child: const Text("Register"),
+                    ),
 
-  ],
-)
+                  ],
+                )
 
               ],
             ),
-
           ),
         ),
       ),

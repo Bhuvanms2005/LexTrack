@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
+import 'main_screen.dart';
+import '../screens/login_screen.dart';
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -21,41 +23,61 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void registerUser() async {
 
-    if (passwordController.text.isEmpty ||
-    confirmPasswordController.text.isEmpty) {
+    if (nameController.text.isEmpty ||
+        phoneController.text.isEmpty ||
+        emailController.text.isEmpty ||
+        passwordController.text.isEmpty ||
+        confirmPasswordController.text.isEmpty) {
 
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text("Please fill all password fields")),
-  );
-  return;
-}
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill all fields")),
+      );
+      return;
+    }
 
-if (passwordController.text != confirmPasswordController.text) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text("Passwords do not match")),
-  );
-  return;
-}
+    if (passwordController.text != confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Passwords do not match")),
+      );
+      return;
+    }
 
     setState(() {
       _isLoading = true;
     });
 
-    await Future.delayed(const Duration(seconds: 2));
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setString("name", nameController.text.trim());
+    await prefs.setString("phone", phoneController.text.trim());
+    await prefs.setString("email", emailController.text.trim());
+    await prefs.setString("password", passwordController.text.trim());
+    await prefs.setBool("isRegistered", true);
+    await prefs.setBool("isLoggedIn", true);
+
+    if (!mounted) return;
 
     setState(() {
       _isLoading = false;
     });
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const MainScreen()),
+      (route) => false,
+    );
   }
+
   @override
-void dispose() {
-  nameController.dispose();
-  phoneController.dispose();
-  emailController.dispose();
-  passwordController.dispose();
-  confirmPasswordController.dispose();
-  super.dispose();
-}
+  void dispose() {
+    nameController.dispose();
+    phoneController.dispose();
+    emailController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
 
@@ -138,11 +160,9 @@ void dispose() {
                 TextField(
                   controller: passwordController,
                   obscureText: !_isPasswordVisible,
-
                   decoration: InputDecoration(
                     labelText: "Password",
                     prefixIcon: const Icon(Icons.lock),
-
                     suffixIcon: IconButton(
                       icon: Icon(
                         _isPasswordVisible
@@ -155,7 +175,6 @@ void dispose() {
                         });
                       },
                     ),
-
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -167,11 +186,9 @@ void dispose() {
                 TextField(
                   controller: confirmPasswordController,
                   obscureText: !_isConfirmPasswordVisible,
-
                   decoration: InputDecoration(
                     labelText: "Confirm Password",
                     prefixIcon: const Icon(Icons.lock),
-
                     suffixIcon: IconButton(
                       icon: Icon(
                         _isConfirmPasswordVisible
@@ -185,7 +202,6 @@ void dispose() {
                         });
                       },
                     ),
-
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -197,14 +213,11 @@ void dispose() {
                 SizedBox(
                   width: double.infinity,
                   height: 45,
-
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFC9A227),
                     ),
-
                     onPressed: _isLoading ? null : registerUser,
-
                     child: _isLoading
                         ? const SizedBox(
                             height: 22,
@@ -231,7 +244,12 @@ void dispose() {
 
                     TextButton(
                       onPressed: () {
-                        Navigator.pop(context);
+                        Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LoginScreen(),
+                        ),
+                      );
                       },
                       child: const Text("Login"),
                     )

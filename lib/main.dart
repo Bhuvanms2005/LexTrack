@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'screens/splash_screen.dart';
 import 'services/notification_service.dart';
 import 'services/hearing_reminder_service.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await NotificationService.init();
   await HearingReminderService.checkTodayHearings();
+
   runApp(const LexTrackApp());
 }
 
@@ -18,7 +20,7 @@ class LexTrackApp extends StatelessWidget {
     return MaterialApp(
       title: 'LexTrack',
       debugShowCheckedModeBanner: false,
-      home: const SplashScreen(),
+      home: const SplashScreen(), 
     );
   }
 }

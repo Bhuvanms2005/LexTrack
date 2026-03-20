@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../database/case_database.dart';
-import '../widgets/app_drawer.dart';
 import 'add_payment_screen.dart';
 import 'add_hearing_screen.dart';
 import 'add_note_screen.dart';
@@ -36,15 +35,60 @@ class _CaseDetailsScreenState extends State<CaseDetailsScreen> {
 
     final updatedCase = await CaseDatabase.getCase(widget.caseItem['id']);
 
-    hearings = await CaseDatabase.getHearings(widget.caseItem['id']);
-    payments = await CaseDatabase.getPayments(widget.caseItem['id']);
-    notes = await CaseDatabase.getNotes(widget.caseItem['id']);
+    final h = await CaseDatabase.getHearings(widget.caseItem['id']);
+    final p = await CaseDatabase.getPayments(widget.caseItem['id']);
+    final n = await CaseDatabase.getNotes(widget.caseItem['id']);
+    final paid = await CaseDatabase.getTotalPayments(widget.caseItem['id']);
 
-    totalPaid = await CaseDatabase.getTotalPayments(widget.caseItem['id']);
+    if (!mounted) return;
 
     setState(() {
       caseData = updatedCase;
+      hearings = h;
+      payments = p;
+      notes = n;
+      totalPaid = paid;
     });
+  }
+
+  Future<void> updateStatus(String status) async {
+    await CaseDatabase.updateCaseStatus(widget.caseItem['id'], status);
+    loadHistory();
+  }
+
+  Future<void> deleteCase() async {
+    await CaseDatabase.deleteCase(widget.caseItem['id']);
+    if (!mounted) return;
+    Navigator.pop(context, true);
+  }
+
+  void confirmDelete() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Delete Case"),
+          content: const Text("Are you sure you want to delete this case?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                deleteCase();
+              },
+              child: const Text("Delete"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Color getStatusColor(String status) {
+    return status == "Completed" ? Colors.green : Colors.red;
   }
 
   @override
@@ -55,13 +99,20 @@ class _CaseDetailsScreenState extends State<CaseDetailsScreen> {
     int totalFee = int.tryParse(data['totalFee'].toString()) ?? 0;
     int remaining = totalFee - totalPaid;
 
+    String status = data['status'] ?? "Pending";
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Case Details"),
         backgroundColor: const Color(0xFF162F4A),
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete),
+            onPressed: confirmDelete,
+          )
+        ],
       ),
-      drawer: const AppDrawer(),
       backgroundColor: const Color(0xFF1E3A5F),
 
       body: SingleChildScrollView(
@@ -91,6 +142,22 @@ class _CaseDetailsScreenState extends State<CaseDetailsScreen> {
                     ),
                   ),
 
+                  const SizedBox(height: 10),
+
+                  Row(
+                    children: [
+                      const Text("Status: ",
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(
+                        status,
+                        style: TextStyle(
+                          color: getStatusColor(status),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                    ],
+                  ),
+
                   const SizedBox(height: 18),
 
                   detailRow("Client", data['clientName']),
@@ -99,6 +166,32 @@ class _CaseDetailsScreenState extends State<CaseDetailsScreen> {
                   detailRow("Case Type", data['caseType']),
                   detailRow("Next Hearing", data['hearingDate']),
                   detailRow("Total Fee", data['totalFee']),
+
+                  const SizedBox(height: 20),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                          ),
+                          onPressed: () => updateStatus("Completed"),
+                          child: const Text("Mark Completed"),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                          ),
+                          onPressed: () => updateStatus("Pending"),
+                          child: const Text("Reopen"),
+                        ),
+                      ),
+                    ],
+                  ),
 
                   const SizedBox(height: 20),
 
@@ -123,103 +216,58 @@ class _CaseDetailsScreenState extends State<CaseDetailsScreen> {
 
             const SizedBox(height:20),
 
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "Hearing History",
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize:18,
-                    fontWeight: FontWeight.bold
-                ),
-              ),
-            ),
-
-            const SizedBox(height:10),
+            sectionTitle("Hearing History"),
 
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: hearings.length,
               itemBuilder:(context,index){
-
                 final h = hearings[index];
-
                 return Card(
                   child: ListTile(
-                    title: Text("${h['date']}  -  ${h['stage']}"),
-                    subtitle: Text("Next Hearing: ${h['nextHearing']}"),
+                    title: Text("${h['date']} - ${h['stage']}"),
+                    subtitle: Text("Next: ${h['nextHearing']}"),
                   ),
                 );
-
               },
             ),
 
             const SizedBox(height:20),
 
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "Payment History",
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize:18,
-                    fontWeight: FontWeight.bold
-                ),
-              ),
-            ),
-
-            const SizedBox(height:10),
+            sectionTitle("Payment History"),
 
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: payments.length,
               itemBuilder:(context,index){
-
                 final p = payments[index];
-
                 return Card(
                   child: ListTile(
-                    title: Text("₹${p['amount']}  -  ${p['method']}"),
+                    title: Text("₹${p['amount']} - ${p['method']}"),
                     subtitle: Text("${p['date']}"),
                   ),
                 );
-
               },
             ),
 
             const SizedBox(height:20),
 
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "Case Notes",
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize:18,
-                    fontWeight: FontWeight.bold
-                ),
-              ),
-            ),
-
-            const SizedBox(height:10),
+            sectionTitle("Case Notes"),
 
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: notes.length,
               itemBuilder:(context,index){
-
                 final n = notes[index];
-
                 return Card(
                   child: ListTile(
                     title: Text(n['note']),
                     subtitle: Text(n['date']),
                   ),
                 );
-
               },
             ),
 
@@ -228,38 +276,19 @@ class _CaseDetailsScreenState extends State<CaseDetailsScreen> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
-
               decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(14)
               ),
-
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
-                  Text(
-                    "Total Fee: ₹$totalFee",
-                    style: const TextStyle(fontSize:16),
-                  ),
-
-                  const SizedBox(height:5),
-
-                  Text(
-                    "Paid: ₹$totalPaid",
-                    style: const TextStyle(fontSize:16),
-                  ),
-
-                  const SizedBox(height:5),
-
+                  Text("Total Fee: ₹$totalFee"),
+                  Text("Paid: ₹$totalPaid"),
                   Text(
                     "Remaining: ₹$remaining",
-                    style: const TextStyle(
-                        fontSize:16,
-                        fontWeight: FontWeight.bold
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   )
-
                 ],
               ),
             ),
@@ -278,9 +307,7 @@ class _CaseDetailsScreenState extends State<CaseDetailsScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => AddHearingScreen(
-                        caseId: data['id'],
-                      ),
+                      builder: (context) => AddHearingScreen(caseId: data['id']),
                     ),
                   ).then((_) => loadHistory());
                 }),
@@ -289,8 +316,7 @@ class _CaseDetailsScreenState extends State<CaseDetailsScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          AddPaymentScreen(caseId: data['id']),
+                      builder: (context) => AddPaymentScreen(caseId: data['id']),
                     ),
                   ).then((_) => loadHistory());
                 }),
@@ -299,9 +325,7 @@ class _CaseDetailsScreenState extends State<CaseDetailsScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => AddNoteScreen(
-                        caseId: data['id'],
-                      ),
+                      builder: (context) => AddNoteScreen(caseId: data['id']),
                     ),
                   ).then((_) => loadHistory());
                 }),
@@ -310,9 +334,7 @@ class _CaseDetailsScreenState extends State<CaseDetailsScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => EditCaseScreen(
-                        caseItem: data,
-                      ),
+                      builder: (context) => EditCaseScreen(caseItem: data),
                     ),
                   ).then((_) => loadHistory());
                 }),
@@ -326,12 +348,25 @@ class _CaseDetailsScreenState extends State<CaseDetailsScreen> {
     );
   }
 
+  Widget sectionTitle(String text) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize:18,
+          fontWeight: FontWeight.bold
+        ),
+      ),
+    );
+  }
+
   Widget detailRow(String label, dynamic value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-
           SizedBox(
             width: 120,
             child: Text(
@@ -342,14 +377,12 @@ class _CaseDetailsScreenState extends State<CaseDetailsScreen> {
               ),
             ),
           ),
-
           Expanded(
             child: Text(
               "$value",
               style: const TextStyle(fontSize: 17),
             ),
           )
-
         ],
       ),
     );
@@ -359,25 +392,16 @@ class _CaseDetailsScreenState extends State<CaseDetailsScreen> {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
-
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
         ),
-
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-
-            Icon(
-              icon,
-              size: 32,
-              color: const Color(0xFFC9A227),
-            ),
-
+            Icon(icon, size: 32, color: const Color(0xFFC9A227)),
             const SizedBox(height: 10),
-
             Text(
               title,
               style: const TextStyle(
@@ -385,7 +409,6 @@ class _CaseDetailsScreenState extends State<CaseDetailsScreen> {
                 fontWeight: FontWeight.w600,
               ),
             )
-
           ],
         ),
       ),

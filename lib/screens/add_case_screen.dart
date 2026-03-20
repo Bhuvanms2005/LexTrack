@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../database/case_database.dart';
-import '../widgets/app_drawer.dart';
 class AddCaseScreen extends StatefulWidget{
   const AddCaseScreen({super.key});
   @override
@@ -29,44 +28,50 @@ class _AddCaseScreenState extends State<AddCaseScreen>{
       });
     }
   }
-  void saveCase() async {
+ void saveCase() async {
+  try {
 
-  if(caseNumberController.text.isEmpty || clientController.text.isEmpty){
+    if(caseNumberController.text.isEmpty || clientController.text.isEmpty){
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill required fields"))
+      );
+      return;
+    }
+
+    Map<String,dynamic> caseData = {
+      "caseNumber": caseNumberController.text,
+      "year": yearController.text,
+      "clientName": clientController.text,
+      "opponentName": opponentController.text,
+      "courtName": courtController.text,
+      "caseType": caseTypeController.text,
+      "hearingDate": hearingDate == null
+          ? ""
+          : "${hearingDate!.day}/${hearingDate!.month}/${hearingDate!.year}",
+      "totalFee": feeController.text,
+      "notes": notesController.text,
+      "status": "Pending"
+    };
+
+    print("DATA: $caseData");
+
+    await CaseDatabase.insertCase(caseData);
+
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Please fill required fields"))
+      const SnackBar(content: Text("Case added successfully")),
     );
-    return;
+
+    Navigator.pop(context,true);
+
+  } catch (e) {
+    print("ERROR: $e");
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Error: $e")),
+    );
   }
-
-  Map<String,dynamic> caseData = {
-    "caseNumber": caseNumberController.text,
-    "year": yearController.text,
-    "clientName": clientController.text,
-    "opponentName": opponentController.text,
-    "courtName": courtController.text,
-    "caseType": caseTypeController.text,
-    "hearingDate": hearingDate == null
-    ? ""
-    : "${hearingDate!.day}/${hearingDate!.month}/${hearingDate!.year}",
-    "totalFee": feeController.text,
-    "notes": notesController.text
-  };
-
-  // print(caseData);
-
-  await CaseDatabase.insertCase(caseData);
-
-  ScaffoldMessenger.of(context).showSnackBar(
-  const SnackBar(
-    content: Text("Case added successfully"),
-    duration: Duration(seconds: 2),
-  ),
-);
-
-Future.delayed(const Duration(seconds: 2), () {
-  Navigator.pop(context);
-});
-
 }
 
   @override
@@ -77,7 +82,6 @@ Future.delayed(const Duration(seconds: 2), () {
   backgroundColor: const Color(0xFF162F4A),
   foregroundColor: Colors.white,
 ),
-    drawer: const AppDrawer(),
     backgroundColor:const Color(0xFF1E3A5F),
     body:Center(
       child:ConstrainedBox(

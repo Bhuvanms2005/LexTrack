@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
 import '../database/case_database.dart';
 import 'case_details_screen.dart';
-import '../widgets/app_drawer.dart';
 
 class CaseListScreen extends StatefulWidget {
   const CaseListScreen({super.key});
 
   @override
-  State<CaseListScreen> createState() => _CaseListScreenState();
+  State<CaseListScreen> createState() => CaseListScreenState();
 }
 
-class _CaseListScreenState extends State<CaseListScreen> {
+class CaseListScreenState extends State<CaseListScreen> {
 
   List<Map<String,dynamic>> cases = [];
   List<Map<String,dynamic>> filteredCases = [];
 
   TextEditingController searchController = TextEditingController();
+
+  String selectedFilter = "All";
 
   @override
   void initState() {
@@ -23,28 +24,80 @@ class _CaseListScreenState extends State<CaseListScreen> {
     loadCases();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    loadCases();
+  }
+
   void loadCases() async {
     final data = await CaseDatabase.getCases();
 
-    setState(() {
-      cases = data;
-      filteredCases = data;
-    });
+    if (!mounted) return;
+
+    cases = data;
+    applyFilter();
+
+    setState(() {});
+  }
+
+  String formatDate(String? date) {
+    if (date == null || date.isEmpty) return "N/A";
+
+    try {
+      DateTime d = DateTime.parse(date);
+      return "${d.day}/${d.month}/${d.year}";
+    } catch (e) {
+      return date;
+    }
+  }
+
+  void applyFilter() {
+    if (selectedFilter == "All") {
+      filteredCases = cases;
+    } else {
+      filteredCases = cases.where((c) {
+        return (c['status'] ?? "Pending") == selectedFilter;
+      }).toList();
+    }
   }
 
   void searchCases(String query) {
 
-    query = query.toLowerCase();
+    query = query.trim().toLowerCase();
+
+    List<Map<String,dynamic>> temp = cases.where((c) {
+      return c['caseNumber'].toString().toLowerCase().contains(query) ||
+          (c['clientName']?.toLowerCase().contains(query) ?? false) ||
+          (c['opponentName']?.toLowerCase().contains(query) ?? false) ||
+          (c['courtName']?.toLowerCase().contains(query) ?? false) ||
+          (c['caseType']?.toLowerCase().contains(query) ?? false);
+    }).toList();
+
+    if (selectedFilter != "All") {
+      temp = temp.where((c) => (c['status'] ?? "Pending") == selectedFilter).toList();
+    }
 
     setState(() {
-      filteredCases = cases.where((c) {
-        return c['caseNumber'].toString().contains(query) ||
-            c['clientName'].toLowerCase().contains(query) ||
-            c['opponentName'].toLowerCase().contains(query) ||
-            c['courtName'].toLowerCase().contains(query) ||
-            c['caseType'].toLowerCase().contains(query);
-      }).toList();
+      filteredCases = temp;
     });
+  }
+
+  Widget filterButton(String label) {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: selectedFilter == label
+            ? const Color(0xFFC9A227)
+            : Colors.grey,
+      ),
+      onPressed: () {
+        setState(() {
+          selectedFilter = label;
+          applyFilter();
+        });
+      },
+      child: Text(label),
+    );
   }
 
   @override
@@ -56,7 +109,6 @@ class _CaseListScreenState extends State<CaseListScreen> {
         backgroundColor: const Color(0xFF162F4A),
         foregroundColor: Colors.white,
       ),
-      drawer: const AppDrawer(),
       backgroundColor: const Color(0xFF1E3A5F),
 
       body: Column(
@@ -79,6 +131,20 @@ class _CaseListScreenState extends State<CaseListScreen> {
             ),
           ),
 
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                filterButton("All"),
+                filterButton("Pending"),
+                filterButton("Completed"),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
           Expanded(
             child: filteredCases.isEmpty
                 ? const Center(
@@ -87,56 +153,77 @@ class _CaseListScreenState extends State<CaseListScreen> {
                       style: TextStyle(color: Colors.white),
                     ),
                   )
-                : ListView.builder(
-                    itemCount: filteredCases.length,
-                    itemBuilder: (context, index) {
-
-                      final caseItem = filteredCases[index];
-
-                      return Padding(
-                        padding: const EdgeInsets.all(10),
-
-                        child: Card(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-
-                          child: ListTile(
-
-                            title: Text(
-                              "${caseItem['caseNumber']}/${caseItem['year']}",
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-
-                                Text("Client: ${caseItem['clientName']}"),
-
-                                Text("Court: ${caseItem['courtName']}"),
-
-                                Text("Next Hearing: ${caseItem['hearingDate']}"),
-
-                              ],
-                            ),
-
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      CaseDetailsScreen(caseItem: caseItem),
-                                ),
-                              );
-                            },
-
-                          ),
-                        ),
-                      );
+                : RefreshIndicator(
+                    onRefresh: () async {
+                      loadCases();
                     },
+                    child: ListView.builder(
+                      itemCount: filteredCases.length,
+                      itemBuilder: (context, index) {
+
+                        final caseItem = filteredCases[index];
+
+                        return Padding(
+                          padding: const EdgeInsets.all(10),
+
+                          child: Card(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+
+                            child: ListTile(
+
+                              title: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    "${caseItem['caseNumber']}/${caseItem['year']}",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    caseItem['status'] ?? "Pending",
+                                    style: TextStyle(
+                                      color: (caseItem['status'] == "Completed")
+                                          ? Colors.green
+                                          : Colors.red,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+
+                                  Text("Client: ${caseItem['clientName'] ?? ''}"),
+
+                                  Text("Court: ${caseItem['courtName'] ?? ''}"),
+
+                                  Text("Next Hearing: ${formatDate(caseItem['hearingDate'])}"),
+
+                                ],
+                              ),
+
+                              onTap: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        CaseDetailsScreen(caseItem: caseItem),
+                                  ),
+                                );
+
+                                loadCases();
+                              },
+
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
           ),
 
