@@ -126,18 +126,51 @@ class DashboardScreenState extends State<DashboardScreen> {
 
         actions: [
 
-          IconButton(
-            icon: const Icon(Icons.notifications_none, color: Colors.white),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const NotificationScreen(),
+          FutureBuilder<int>(
+  future: CaseDatabase.getTodayHearingsCount(),
+  builder: (context, snapshot) {
+
+    int count = snapshot.data ?? 0;
+
+    return Stack(
+      children: [
+
+        IconButton(
+          icon: const Icon(Icons.notifications_none, color: Colors.white),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const NotificationScreen(),
+              ),
+            );
+          },
+        ),
+
+        if (count > 0)
+          Positioned(
+            right: 8,
+            top: 8,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+              child: Text(
+                "$count",
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
                 ),
-              );
-            },
+              ),
+            ),
           ),
 
+      ],
+    );
+  },
+),
           PopupMenuButton<String>(
             icon: const Icon(Icons.account_circle, color: Colors.white),
             onSelected: (value) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../database/case_database.dart';
+import 'case_details_screen.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -10,9 +11,8 @@ class NotificationScreen extends StatefulWidget {
 
 class _NotificationScreenState extends State<NotificationScreen> {
 
-  int todayHearings = 0;
-  int pendingCases = 0;
-  int pendingFees = 0;
+  List<Map<String,dynamic>> todayCases = [];
+  List<Map<String,dynamic>> pendingCases = [];
 
   bool isLoading = true;
 
@@ -24,42 +24,54 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   void loadNotifications() async {
 
-    final hearings = await CaseDatabase.getTodayHearingsCount();
     final cases = await CaseDatabase.getCases();
-    final fees = await CaseDatabase.getTotalPendingFees();
+    final todayList = await CaseDatabase.getTodayHearingsWithCase();
 
-    int pending = 0;
+    List<Map<String,dynamic>> pending = [];
 
     for (var c in cases) {
       if (c['status'] != "Completed") {
-        pending++;
+        pending.add(c);
       }
     }
 
     if (!mounted) return;
 
     setState(() {
-      todayHearings = hearings;
+      todayCases = todayList;
       pendingCases = pending;
-      pendingFees = fees;
       isLoading = false;
     });
   }
 
-  Widget notificationCard(IconData icon, String title, String value) {
-    return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListTile(
-        leading: Icon(icon, color: const Color(0xFFC9A227)),
-        title: Text(title),
-        trailing: Text(
-          value,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+  Widget sectionTitle(String title) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        title,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
         ),
+      ),
+    );
+  }
+
+  Widget caseTile(Map<String,dynamic> c) {
+    return Card(
+      child: ListTile(
+        title: Text("${c['caseNumber']}/${c['year']}"),
+        subtitle: Text(c['clientName'] ?? ""),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => CaseDetailsScreen(caseItem: c),
+            ),
+          );
+        },
       ),
     );
   }
@@ -74,32 +86,47 @@ class _NotificationScreenState extends State<NotificationScreen> {
         foregroundColor: Colors.white,
       ),
       backgroundColor: const Color(0xFF1E3A5F),
+
       body: isLoading
           ? const Center(
               child: CircularProgressIndicator(color: Colors.white),
             )
-          : Padding(
+          : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
 
-                  notificationCard(
-                    Icons.today,
-                    "Today's Hearings",
-                    "$todayHearings",
-                  ),
+                  sectionTitle("Today's Hearings"),
 
-                  notificationCard(
-                    Icons.folder,
-                    "Pending Cases",
-                    "$pendingCases",
-                  ),
+                  const SizedBox(height: 10),
 
-                  notificationCard(
-                    Icons.currency_rupee,
-                    "Pending Fees",
-                    "₹$pendingFees",
-                  ),
+                  todayCases.isEmpty
+                      ? const Text("No hearings today", style: TextStyle(color: Colors.white))
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: todayCases.length,
+                          itemBuilder: (context, index) {
+                            return caseTile(todayCases[index]);
+                          },
+                        ),
+
+                  const SizedBox(height: 20),
+
+                  sectionTitle("Pending Cases"),
+
+                  const SizedBox(height: 10),
+
+                  pendingCases.isEmpty
+                      ? const Text("No pending cases", style: TextStyle(color: Colors.white))
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: pendingCases.length,
+                          itemBuilder: (context, index) {
+                            return caseTile(pendingCases[index]);
+                          },
+                        ),
 
                 ],
               ),

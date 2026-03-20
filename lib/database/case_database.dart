@@ -323,4 +323,30 @@ class CaseDatabase {
     whereArgs: [id],
   );
 }
+static Future<List<Map<String,dynamic>>> getUpcomingHearings() async {
+  final db = await getDatabase();
+
+  final now = DateTime.now();
+  final tomorrow = now.add(const Duration(days: 1));
+
+  final cases = await db.query('cases');
+
+  List<Map<String,dynamic>> result = [];
+
+  for (var c in cases) {
+    if (c['hearingDate'] != null && c['hearingDate'] != "") {
+      try {
+        DateTime d = DateTime.parse(c['hearingDate']);
+
+        if (d.year == tomorrow.year &&
+            d.month == tomorrow.month &&
+            d.day == tomorrow.day) {
+          result.add(c);
+        }
+      } catch (_) {}
+    }
+  }
+
+  return result;
+}
 }
