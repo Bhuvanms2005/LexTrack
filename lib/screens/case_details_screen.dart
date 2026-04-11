@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../database/case_database.dart';
+import '../services/pdf_service.dart';
 import 'add_payment_screen.dart';
 import 'add_hearing_screen.dart';
 import 'add_note_screen.dart';
@@ -337,6 +338,15 @@ class _CaseDetailsScreenState extends State<CaseDetailsScreen> {
                       builder: (context) => EditCaseScreen(caseItem: data),
                     ),
                   ).then((_) => loadHistory());
+                }),
+                actionCard(Icons.picture_as_pdf, "Export PDF", () {
+                  PdfService.generateCaseReport(
+                    data,
+                    hearings,
+                    payments,
+                    notes,
+                    totalPaid,
+                  );
                 }),
 
               ],
