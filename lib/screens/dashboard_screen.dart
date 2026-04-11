@@ -85,26 +85,43 @@ class DashboardScreenState extends State<DashboardScreen> {
   }
 
   void loadNotes() async {
-    final prefs = await SharedPreferences.getInstance();
+  final prefs = await SharedPreferences.getInstance();
+
+  String today =
+      "${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}";
+
+  String? savedDate = prefs.getString("notes_date");
+
+  if (savedDate != today) {
+    await prefs.remove("daily_notes");
+    await prefs.setString("notes_date", today);
+    notes = [];
+  } else {
     notes = prefs.getStringList("daily_notes") ?? [];
-
-    if (!mounted) return;
-    setState(() {});
   }
 
-  void addNote() async {
-    if (noteController.text.trim().isEmpty) return;
+  if (!mounted) return;
+  setState(() {});
+}
 
-    final prefs = await SharedPreferences.getInstance();
+ void addNote() async {
+  if (noteController.text.trim().isEmpty) return;
 
-    notes.add(noteController.text.trim());
-    await prefs.setStringList("daily_notes", notes);
+  final prefs = await SharedPreferences.getInstance();
 
-    noteController.clear();
+  String today =
+      "${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}";
 
-    if (!mounted) return;
-    setState(() {});
-  }
+  await prefs.setString("notes_date", today);
+
+  notes.add(noteController.text.trim());
+  await prefs.setStringList("daily_notes", notes);
+
+  noteController.clear();
+
+  if (!mounted) return;
+  setState(() {});
+}
 
   Widget buildChart() {
     return Container(
