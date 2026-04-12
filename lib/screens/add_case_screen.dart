@@ -53,8 +53,6 @@ class _AddCaseScreenState extends State<AddCaseScreen>{
       "status": "Pending"
     };
 
-    print("DATA: $caseData");
-
     await CaseDatabase.insertCase(caseData);
 
     if (!mounted) return;
