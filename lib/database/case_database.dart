@@ -236,7 +236,7 @@ class CaseDatabase {
         "${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}";
 
     return await db.rawQuery('''
-      SELECT hearings.*, cases.caseNumber, cases.clientName
+      SELECT hearings.*, cases.caseNumber, cases.clientName,cases.year,cases.courtName
       FROM hearings
       INNER JOIN cases ON hearings.caseId = cases.id
       WHERE hearings.date = ?
