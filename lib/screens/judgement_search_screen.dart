@@ -44,7 +44,6 @@ class _JudgementSearchScreenState extends State<JudgementSearchScreen> {
     try {
       List<Map<String, String>> fetchedResults =
           await JudgementService.fetchJudgements(query);
-
       setState(() {
         results = fetchedResults;
       });
@@ -58,16 +57,26 @@ class _JudgementSearchScreenState extends State<JudgementSearchScreen> {
     }
   }
 
+  // FIX: Don't use canLaunchUrl as a gate — it's unreliable on Android 11+
+  // even with the <queries> block. Call launchUrl directly and catch failures.
   Future<void> openInBrowser(String url) async {
     final Uri uri = Uri.parse(url);
-    if (!await canLaunchUrl(uri)) {
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("No browser app found to open this link")),
+        );
+      }
+    } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Could not open this link")),
+        SnackBar(content: Text("Could not open link: $e")),
       );
-      return;
     }
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   Future<void> openKanoonSearch(String query) async {
@@ -124,7 +133,7 @@ class _JudgementSearchScreenState extends State<JudgementSearchScreen> {
 
             const SizedBox(height: 12),
 
-            // Open in browser fallback
+            // Direct browser fallback shortcut
             if (searchController.text.isNotEmpty)
               InkWell(
                 onTap: () => openKanoonSearch(searchController.text),
@@ -144,7 +153,8 @@ class _JudgementSearchScreenState extends State<JudgementSearchScreen> {
                       SizedBox(width: 8),
                       Text(
                         "Open search directly in Indian Kanoon →",
-                        style: TextStyle(color: Colors.white70, fontSize: 13),
+                        style:
+                            TextStyle(color: Colors.white70, fontSize: 13),
                       ),
                     ],
                   ),
@@ -189,7 +199,9 @@ class _JudgementSearchScreenState extends State<JudgementSearchScreen> {
           Text(
             "Search legal judgements",
             style: TextStyle(
-                color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold),
           ),
           SizedBox(height: 8),
           Text(
@@ -217,8 +229,7 @@ class _JudgementSearchScreenState extends State<JudgementSearchScreen> {
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFC9A227)),
-            onPressed: () =>
-                openKanoonSearch(searchController.text),
+            onPressed: () => openKanoonSearch(searchController.text),
             icon: const Icon(Icons.open_in_browser),
             label: const Text("Open in Indian Kanoon"),
           ),
@@ -237,7 +248,9 @@ class _JudgementSearchScreenState extends State<JudgementSearchScreen> {
           const Text(
             "Could not fetch results",
             style: TextStyle(
-                color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           const Text(
@@ -249,8 +262,7 @@ class _JudgementSearchScreenState extends State<JudgementSearchScreen> {
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFC9A227)),
-            onPressed: () =>
-                openKanoonSearch(searchController.text),
+            onPressed: () => openKanoonSearch(searchController.text),
             icon: const Icon(Icons.open_in_browser),
             label: const Text("Open in Browser"),
           ),
@@ -291,9 +303,10 @@ class _JudgementSearchScreenState extends State<JudgementSearchScreen> {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 14, vertical: 8),
               ),
-              onPressed: (item["link"] == null || item["link"]!.isEmpty)
-                  ? null
-                  : () => openInBrowser(item["link"]!),
+              onPressed:
+                  (item["link"] == null || item["link"]!.isEmpty)
+                      ? null
+                      : () => openInBrowser(item["link"]!),
               icon: const Icon(Icons.open_in_new, size: 16),
               label: const Text("Open"),
             ),

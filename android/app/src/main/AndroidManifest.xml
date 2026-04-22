@@ -1,6 +1,24 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.lextrack">
 
+    <!-- Required for network requests (http package + url_launcher) -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Required for url_launcher on Android 11+ (API 30+)           -->
+    <!-- Without this, canLaunchUrl() always returns false             -->
+    <queries>
+        <!-- Allow launching any https:// URL in the default browser -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <!-- Allow launching any http:// URL -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="http" />
+        </intent>
+    </queries>
+
     <application
         android:label="LexTrack"
         android:name="${applicationName}"
