@@ -1,13 +1,24 @@
 import 'package:flutter/material.dart';
 import 'screens/splash_screen.dart';
 import 'services/notification_service.dart';
-import 'services/hearing_reminder_service.dart';
+import 'services/background_service.dart';
+import 'database/case_database.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 1. Init local notifications + request POST_NOTIFICATIONS permission
+  //    (Android 13+ requires runtime permission request)
   await NotificationService.init();
-  await HearingReminderService.checkTodayHearings();
+
+  // 2. Register the daily background task with Workmanager.
+  //    This persists in Android's WorkManager database — the task will
+  //    fire every day at 8 AM even when the app is completely closed.
+  await BackgroundService.registerDailyReminder();
+
+  // 3. Also check today's hearings immediately on launch (app-open reminder)
+  final todayHearings = await CaseDatabase.getTodayHearingsWithCase();
+  await NotificationService.checkTodayHearings(todayHearings);
 
   runApp(const LexTrackApp());
 }

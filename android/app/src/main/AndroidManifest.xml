@@ -1,18 +1,26 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.lextrack">
 
-    <!-- Required for network requests (http package + url_launcher) -->
+    <!-- ─── Permissions ──────────────────────────────────────────────────── -->
+
+    <!-- Network access for http calls -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
-    <!-- Required for url_launcher on Android 11+ (API 30+)           -->
-    <!-- Without this, canLaunchUrl() always returns false             -->
+    <!-- Show notifications (required on Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+    <!-- Allow Workmanager to survive device reboots -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+
+    <!-- Keep CPU alive while background task runs -->
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+
+    <!-- Required for url_launcher on Android 11+ ────────────────────────── -->
     <queries>
-        <!-- Allow launching any https:// URL in the default browser -->
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" />
         </intent>
-        <!-- Allow launching any http:// URL -->
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="http" />
@@ -39,6 +47,20 @@
             </intent-filter>
 
         </activity>
+
+        <!-- ─── Workmanager: background task scheduler ────────────────────── -->
+        <service
+            android:name="androidx.work.impl.background.systemalarm.SystemAlarmService"
+            android:exported="false"/>
+
+        <!-- Boot receiver so Workmanager re-registers tasks after reboot -->
+        <receiver
+            android:name="androidx.work.impl.background.systemalarm.RescheduleReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+            </intent-filter>
+        </receiver>
 
         <meta-data
             android:name="flutterEmbedding"
